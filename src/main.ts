@@ -14,6 +14,12 @@ async function bootstrap() {
     } as admin.ServiceAccount),
   });
 
+  app.enableCors({
+    origin: 'http://localhost:5173',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
+  });
+
   const config = new DocumentBuilder()
     .setTitle('Codeway Panel API')
     .setDescription(
