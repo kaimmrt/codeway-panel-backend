@@ -42,11 +42,24 @@ export class AuthService {
 
       const token = await userCredential.user?.getIdToken();
       return {
-        token: token,
+        userId: userCredential.user.uid,
+        email: userCredential.user.email,
+        expiresIn: userCredential['_tokenResponse'].expiresIn,
+        token,
       };
     } catch (error) {
       console.error('Login failed', error);
       throw new Error('Login failed');
+    }
+  }
+
+  public async logout() {
+    try {
+      await firebase.signOut(this.auth);
+      return { message: 'Logout successful' };
+    } catch (error) {
+      console.error('Logout failed', error);
+      throw new Error('Logout failed');
     }
   }
 

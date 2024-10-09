@@ -14,9 +14,14 @@ export class AuthController {
     return await this.authService.register(registerData);
   }
 
-  @Post('login')
+  @Post('signin')
   public async login(@Body() loginData: LoginRequest) {
     return this.authService.login(loginData);
+  }
+
+  @Post('logout')
+  public async logout() {
+    return this.authService.logout();
   }
 
   @Get('profile')
