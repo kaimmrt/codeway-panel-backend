@@ -1,83 +1,78 @@
 import { Injectable } from '@nestjs/common';
-import * as firebase from 'firebase/auth';
-import { initializeApp } from 'firebase/app';
 import { RegisterRequest } from './request/register.request';
+import { getFirestore } from 'firebase-admin/firestore';
+import { FirebaseService } from 'src/firebase/firebase.service';
 import { LoginRequest } from './request/login.request';
+import { LoginResponse } from './response/login.response';
+import { UserRecord } from 'firebase-admin/lib/auth/user-record';
 
 @Injectable()
 export class AuthService {
-  private readonly firebaseConfig = {
-    apiKey: process.env.FIREBASE_API_KEY,
-    authDomain: process.env.FIRABASE_AUTH_DOMAIN,
-    projectId: process.env.PROJECT_ID,
-    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.MESSAGING_SENDER_ID,
-    appId: process.env.APP_ID,
-  };
+  constructor(private readonly firebaseService: FirebaseService) {}
 
-  private readonly app = initializeApp(this.firebaseConfig);
-  private readonly auth = firebase.getAuth(this.app);
-
-  public async register(registerData: RegisterRequest) {
+  public async register(registerData: RegisterRequest): Promise<UserRecord> {
+    const db = getFirestore();
     try {
-      const record = await firebase.createUserWithEmailAndPassword(
-        this.auth,
-        registerData.email,
-        registerData.password,
-      );
-      return record;
+      const userRecord = await this.firebaseService.getAuth().createUser({
+        email: registerData.email,
+        password: registerData.password,
+      });
+      await db.collection('users').doc(userRecord.uid).set({
+        email: registerData.email,
+        countryCode: registerData.countryCode,
+      });
+      return userRecord;
     } catch (error) {
       console.error('Registration failed', error);
       throw new Error('Registration failed');
     }
   }
 
-  public async login(loginData: LoginRequest) {
+  public async login(loginData: LoginRequest): Promise<LoginResponse> {
     try {
-      const userCredential = await firebase.signInWithEmailAndPassword(
-        this.auth,
-        loginData.email,
-        loginData.password,
-      );
+      const decodedToken = await this.firebaseService
+        .getAuth()
+        .verifyIdToken(loginData.idToken);
+      const uid = decodedToken.uid;
 
-      const token = await userCredential.user?.getIdToken();
-      return {
-        userId: userCredential.user.uid,
-        email: userCredential.user.email,
-        expiresIn: userCredential['_tokenResponse'].expiresIn,
-        token,
-      };
-    } catch (error) {
-      console.error('Login failed', error);
-      throw new Error('Login failed');
-    }
-  }
+      const userDoc = await this.firebaseService
+        .getFirestore()
+        .collection('users')
+        .doc(uid)
+        .get();
 
-  public async logout() {
-    try {
-      await firebase.signOut(this.auth);
-      return { message: 'Logout successful' };
-    } catch (error) {
-      console.error('Logout failed', error);
-      throw new Error('Logout failed');
-    }
-  }
-
-  public async getProfile() {
-    try {
-      const user = this.auth.currentUser;
-
-      if (!user) {
+      if (!userDoc.exists) {
         throw new Error('User not found');
       }
 
+      const userData = userDoc.data();
       return {
-        email: user.email,
-        displayName: user.displayName,
+        userId: decodedToken.uid,
+        email: decodedToken.email,
+        countryCode: userData.countryCode,
+        token: loginData.idToken,
       };
-    } catch (error) {
-      console.error('Error fetching profile', error);
-      throw new Error('Could not fetch profile');
+    } catch (err: any) {
+      console.log(err);
+      throw new Error('Unauthorized');
     }
   }
+
+  // public async getProfile() {
+  //   try {
+  //     const user = this.auth.currentUser;
+
+  //     if (!user) {
+  //       throw new Error('User not found');
+  //     }
+
+  //     return {
+  //       email: user.email,
+  //       displayName: user.displayName,
+  //     };
+  //   } catch (error) {
+  //     console.error('Error fetching profile', error);
+  //     throw new Error('Could not fetch profile');
+  //   }
+  // }
 }

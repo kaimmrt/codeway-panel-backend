@@ -5,10 +5,5 @@ export class LoginRequest {
   @ApiProperty()
   @IsNotEmpty()
   @IsString()
-  public email: string;
-
-  @ApiProperty()
-  @IsNotEmpty()
-  @IsString()
-  public password: string;
+  public idToken: string;
 }

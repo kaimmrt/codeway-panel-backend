@@ -2,7 +2,12 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsNotEmpty, IsString } from 'class-validator';
 import { CountryCodeEnum } from 'src/models/enums/country-code.enum';
 
-export class RegisterRequest {
+export class LoginResponse {
+  @ApiProperty()
+  @IsNotEmpty()
+  @IsString()
+  public userId: string;
+
   @ApiProperty()
   @IsNotEmpty()
   @IsString()
@@ -11,7 +16,7 @@ export class RegisterRequest {
   @ApiProperty()
   @IsNotEmpty()
   @IsString()
-  public password: string;
+  public token: string;
 
   @ApiProperty({ enum: CountryCodeEnum, example: CountryCodeEnum.TR })
   @IsNotEmpty()
